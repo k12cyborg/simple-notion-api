@@ -4,7 +4,7 @@ export const getNotes = async (req, res) => {
   const fileNames = [];
   try {
     const files = await readdir("./src/data");
-    for (const file of files) fileNames.push(file);
+    for (const file of files) fileNames.push(file.slice(0, -4));
     res.json(fileNames);
   } catch (err) {
     console.log(err);
@@ -14,15 +14,15 @@ export const getNotes = async (req, res) => {
 
 export const getNote = async (req, res) => {
   const { title } = req.params;
-
   let file;
   try {
-    file = await open(`./src/data/${title}.txt`);
+    file = await open(`./src/data/${title}`);
     const data = await file.readFile({ encoding: "utf-8" });
-    res.json(data);
+    res.status(200).json(data);
   } catch (error) {
+    console.log(error)
     if (error.code === "ENOENT") {
-      res.status(404).json({ message: "File not found" });
+      res.status(404).json({ message: "File not found", file: title });
     } else {
       console.error(error);
       res.status(500).json({ message: "Internal server error" });
@@ -35,14 +35,12 @@ export const getNote = async (req, res) => {
 export const updateNote = async (req, res) => {
   const { title } = req.params;
   const { content } = req.body;
-  console.log(content);
+  
+  if (title === undefined || content === undefined) res.status(400).json({ message: "Title or content not provided" });
 
-  if (title === undefined || content === undefined) {
-    return res.status(400).json({ message: "Title or content not provided" });
-  }
   let file;
   try {
-    file = await open(`./src/data/${title}.txt`, "w");
+    file = await open(`./src/data/${title.trim().replaceAll(" ", "_")}`, "w");
     await file.writeFile(content, { encoding: "utf-8" });
     res.status(200).json({ message: "Note updated" });
   } catch (error) {
@@ -56,13 +54,12 @@ export const updateNote = async (req, res) => {
 export const newNote = async (req, res) => {
   const title = req.body.title;
 
-  console.log(title)
   if (title === undefined) {
     return res.status(400).json({ message: "Title not provided" });
   }
 
   try {
-    await writeFile(`./src/data/${title}.txt`, `Nueva nota: ${title}`, {
+    await writeFile(`./src/data/${title.trim().replaceAll(" ","_")}`, "", {
       encoding: "utf-8",
     });
     res.status(201).json({ message: "Note created" });
@@ -74,7 +71,7 @@ export const newNote = async (req, res) => {
 
 export const deleteNote = async (req,res) => {
   const title = req.params.title;
-  const path = `./src/data/${title}`
+  const path = `./src/data/${title.trim().replaceAll(" ","_")}`
   if (title === undefined) {
     return res.status(400).json({ message: "Title not provided" });
   }
